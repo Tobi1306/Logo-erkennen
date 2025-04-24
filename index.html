@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Logo Detector</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      height: 100%;
+      background: black;
+    }
+    #webcam-container {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    canvas {
+      width: 100vw !important;
+      height: 100vh !important;
+      object-fit: contain !important;
+      display: block;
+      z-index: 1;
+    }
+    #overlay-text {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      color: white;
+      font-size: 2rem;
+      font-weight: bold;
+      background-color: rgba(0, 0, 0, 0.5);
+      padding: 10px 20px;
+      border-radius: 10px;
+      z-index: 2;
+      text-align: center;
+    }
+    #next-button {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      padding: 10px 20px;
+      font-size: 16px;
+      z-index: 3;
+    }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.13.0/dist/tf.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@0.8.4/dist/teachablemachine-image.min.js"></script>
+</head>
+<body>
+  <div id="webcam-container">
+    <div id="overlay-text">Lade Modell...</div>
+  </div>
+  <button id="next-button" style="display: none;">Nächstes Logo scannen</button>
+
+  <script type="text/javascript">
+    let model, webcam, maxPredictions;
+    const overlayText = document.getElementById("overlay-text");
+    const nextButton = document.getElementById("next-button");
+    let classBuffer = {};
+    let isFrozen = false;
+    let lastDetectedClass = "";
+    const freezeDelay = 500; // 0.5 Sekunden
+
+    async function init() {
+      const URL = "./model/";
+      const modelURL = URL + "model.json";
+      const metadataURL = URL + "metadata.json";
+
+      try {
+        model = await tmImage.load(modelURL, metadataURL);
+        maxPredictions = model.getTotalClasses();
+
+        webcam = new tmImage.Webcam(640, 480, true);
+        await webcam.setup();
+        await webcam.play();
+
+        const canvas = webcam.canvas;
+        canvas.setAttribute("width", window.innerWidth);
+        canvas.setAttribute("height", window.innerHeight);
+        canvas.style.width = "100vw";
+        canvas.style.height = "100vh";
+        canvas.style.objectFit = "contain";
+
+        document.getElementById("webcam-container").appendChild(canvas);
+
+        window.requestAnimationFrame(loop);
+      } catch (error) {
+        overlayText.innerText = "? Kamera konnte nicht aktiviert werden.";
+        console.error(error);
+      }
+    }
+
+    async function loop() {
+      if (!isFrozen) {
+        webcam.update();
+        await predict();
+      }
+      window.requestAnimationFrame(loop);
+    }
+
+    async function predict() {
+      const prediction = await model.predict(webcam.canvas);
+      const highest = prediction.reduce((prev, current) => (prev.probability > current.probability) ? prev : current);
+      const now = Date.now();
+
+      if (highest.className !== "kein logo" && highest.probability > 0.8) {
+        if (!classBuffer[highest.className]) {
+          classBuffer[highest.className] = now;
+        } else if (now - classBuffer[highest.className] >= freezeDelay) {
+          if (lastDetectedClass !== highest.className) {
+            overlayText.innerText = `? Erkannt: ${highest.className}`;
+            lastDetectedClass = highest.className;
+            isFrozen = true;
+            nextButton.style.display = "block";
+          }
+        }
+      } else {
+        classBuffer = {};
+      }
+    }
+
+    nextButton.onclick = () => {
+      overlayText.innerText = "";
+      lastDetectedClass = "";
+      isFrozen = false;
+      classBuffer = {};
+      nextButton.style.display = "none";
+    };
+
+    window.addEventListener("load", init);
+  </script>
+</body>
+</html>
