@@ -60,6 +60,7 @@
       display: none;
     }
   </style>
+
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.13.0/dist/tf.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@0.8.4/dist/teachablemachine-image.min.js"></script>
 </head>
@@ -92,8 +93,8 @@
       const constraints = {
         video: {
           facingMode: { ideal: "environment" },
-          width: { ideal: 720 },
-          height: { ideal: 1280 }
+          width: { ideal: 9999 },
+          height: { ideal: 9999 }
         },
         audio: false
       };
@@ -102,14 +103,12 @@
         const stream = await navigator.mediaDevices.getUserMedia(constraints);
         video.srcObject = stream;
 
-        await new Promise((resolve) => {
+        await new Promise(resolve => {
           video.onloadedmetadata = () => resolve();
         });
 
         webcamCanvas = document.createElement("canvas");
         webcamCtx = webcamCanvas.getContext("2d");
-        webcamCanvas.width = video.videoWidth;
-        webcamCanvas.height = video.videoHeight;
 
         requestAnimationFrame(loop);
       } catch (err) {
