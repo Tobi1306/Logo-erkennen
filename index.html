@@ -80,10 +80,13 @@
 
       const flip = false;
       const constraints = {
-        facingMode: { exact: "environment" },
-        width: 1280,
-        height: 720
+        video: {
+          facingMode: { ideal: "environment" },
+          width: { ideal: 720 },
+          height: { ideal: 1280 }
+        }
       };
+
 
       webcam = new tmImage.Webcam(1280, 720, flip, constraints);
       await webcam.setup();
