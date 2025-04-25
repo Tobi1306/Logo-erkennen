@@ -159,6 +159,9 @@
     const backButton = document.getElementById("back-button");
     let currentClassName = '';
     let scanning = false;
+    let lastDetectedClass = '';
+    let classDetectionStartTime = 0;
+    let isClassDetected = false;
 
     const classTexts = {
       "Class 1": {
@@ -216,7 +219,6 @@
     }
 
     function nextScan() {
-      // Verstecke den Text, den Zurück-Button und alle Panels
       logoName.style.display = 'none';
       nextScanButton.style.display = 'none';
       backButton.style.display = 'none';
@@ -239,30 +241,43 @@
         (prev.probability > current.probability) ? prev : current
       );
 
-      if (highest.probability > 0.95 && currentClassName !== highest.className) {
-        currentClassName = highest.className;
-        logoName.innerText = currentClassName;
-        logoName.style.display = 'block';
-
-        const texts = classTexts[currentClassName];
-        if (texts) {
-          document.getElementById("panel-details").innerText = texts.details;
-          document.getElementById("panel-pflege").innerText = texts.pflege;
-          document.getElementById("panel-nachhaltigkeit").innerText = texts.nachhaltigkeit;
-        } else {
-          document.getElementById("panel-details").innerText = "Keine Produktdetails verfügbar.";
-          document.getElementById("panel-pflege").innerText = "Keine Pflegehinweise verfügbar.";
-          document.getElementById("panel-nachhaltigkeit").innerText = "Keine Nachhaltigkeitsinfos verfügbar.";
+      if (highest.probability > 0.95) {
+        if (highest.className !== lastDetectedClass) {
+          lastDetectedClass = highest.className;
+          classDetectionStartTime = Date.now(); // Start der Zeitmessung
         }
 
-        document.getElementById("circle-menu").style.display = "flex";
-        nextScanButton.style.display = 'block';
-        scanning = false;
-      } else if (highest.probability < 0.8) {
+        // Wenn eine Klasse für mindestens 0,5 Sekunden erkannt wurde
+        if (Date.now() - classDetectionStartTime >= 500) {
+          if (!isClassDetected) {
+            isClassDetected = true;
+            currentClassName = highest.className;
+            logoName.innerText = currentClassName;
+            logoName.style.display = 'block';
+
+            const texts = classTexts[currentClassName];
+            if (texts) {
+              document.getElementById("panel-details").innerText = texts.details;
+              document.getElementById("panel-pflege").innerText = texts.pflege;
+              document.getElementById("panel-nachhaltigkeit").innerText = texts.nachhaltigkeit;
+            } else {
+              document.getElementById("panel-details").innerText = "Keine Produktdetails verfügbar.";
+              document.getElementById("panel-pflege").innerText = "Keine Pflegehinweise verfügbar.";
+              document.getElementById("panel-nachhaltigkeit").innerText = "Keine Nachhaltigkeitsinfos verfügbar.";
+            }
+
+            document.getElementById("circle-menu").style.display = "flex";
+            nextScanButton.style.display = 'block';
+            scanning = false;
+          }
+        }
+      } else {
+        // Wenn die Wahrscheinlichkeit unter 95% fällt, setze den Erkennungsstatus zurück
+        isClassDetected = false;
         logoName.innerText = "Kein Logo erkannt";
         logoName.style.display = 'block';
-        document.getElementById("circle-menu").style.display = "none"; // Kreise nicht anzeigen
-        scanning = true; // Weiter scannen
+        document.getElementById("circle-menu").style.display = "none";
+        scanning = true;
       }
     }
 
