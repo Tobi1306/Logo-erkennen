@@ -239,7 +239,7 @@
         (prev.probability > current.probability) ? prev : current
       );
 
-      if (highest.probability > 0.8 && currentClassName !== highest.className) {
+      if (highest.probability > 0.95 && currentClassName !== highest.className) {
         currentClassName = highest.className;
         logoName.innerText = currentClassName;
         logoName.style.display = 'block';
