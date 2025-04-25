@@ -253,7 +253,12 @@
       }
     }
 
-    window.addEventListener("load", init);
+    window.addEventListener("load", () => {
+      init().then(() => {
+        scanning = true; // Direkt beim Start scannen
+      });
+    });
+
 
     video.addEventListener("loadeddata", function () {
       video.play();
