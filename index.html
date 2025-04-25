@@ -17,9 +17,6 @@
       left: 0;
       width: 100vw;
       height: 100vh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
     }
     canvas {
       width: 100vw !important;
@@ -34,21 +31,25 @@
       left: 50%;
       transform: translate(-50%, -50%);
       color: white;
-      font-size: 2rem;
+      font-size: 2.5rem;
       font-weight: bold;
       background-color: rgba(0, 0, 0, 0.5);
-      padding: 10px 20px;
-      border-radius: 10px;
+      padding: 15px 30px;
+      border-radius: 15px;
       z-index: 2;
       text-align: center;
     }
-    #next-button {
-      position: fixed;
-      bottom: 20px;
+    #scan-button {
+      position: absolute;
+      bottom: 30px;
       left: 50%;
       transform: translateX(-50%);
-      padding: 10px 20px;
-      font-size: 16px;
+      padding: 15px 25px;
+      font-size: 1.2rem;
+      background-color: rgba(255, 255, 255, 0.8);
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
       z-index: 3;
     }
   </style>
@@ -58,49 +59,47 @@
 <body>
   <div id="webcam-container">
     <div id="overlay-text">Lade Modell...</div>
+    <button id="scan-button" style="display: none;">NÃ¤chstes Logo scannen</button>
   </div>
-  <button id="next-button" style="display: none;">Nächstes Logo scannen</button>
 
   <script type="text/javascript">
     let model, webcam, maxPredictions;
     const overlayText = document.getElementById("overlay-text");
-    const nextButton = document.getElementById("next-button");
+    const scanButton = document.getElementById("scan-button");
     let classBuffer = {};
-    let isFrozen = false;
-    let lastDetectedClass = "";
-    const freezeDelay = 500; // 0.5 Sekunden
+    let currentClass = "";
+    let freeze = false;
 
     async function init() {
       const URL = "./model/";
       const modelURL = URL + "model.json";
       const metadataURL = URL + "metadata.json";
 
-      try {
-        model = await tmImage.load(modelURL, metadataURL);
-        maxPredictions = model.getTotalClasses();
+      model = await tmImage.load(modelURL, metadataURL);
+      maxPredictions = model.getTotalClasses();
 
-        webcam = new tmImage.Webcam(640, 480, true);
-        await webcam.setup();
-        await webcam.play();
+      const flip = false;
+      const constraints = {
+        facingMode: { exact: "environment" },
+        width: 1280,
+        height: 720
+      };
 
-        const canvas = webcam.canvas;
-        canvas.setAttribute("width", window.innerWidth);
-        canvas.setAttribute("height", window.innerHeight);
-        canvas.style.width = "100vw";
-        canvas.style.height = "100vh";
-        canvas.style.objectFit = "contain";
+      webcam = new tmImage.Webcam(1280, 720, flip, constraints);
+      await webcam.setup();
+      await webcam.play();
 
-        document.getElementById("webcam-container").appendChild(canvas);
+      const canvas = webcam.canvas;
+      canvas.style.width = "100vw";
+      canvas.style.height = "100vh";
+      canvas.style.objectFit = "contain";
+      document.getElementById("webcam-container").appendChild(canvas);
 
-        window.requestAnimationFrame(loop);
-      } catch (error) {
-        overlayText.innerText = "? Kamera konnte nicht aktiviert werden.";
-        console.error(error);
-      }
+      window.requestAnimationFrame(loop);
     }
 
     async function loop() {
-      if (!isFrozen) {
+      if (!freeze) {
         webcam.update();
         await predict();
       }
@@ -109,32 +108,33 @@
 
     async function predict() {
       const prediction = await model.predict(webcam.canvas);
-      const highest = prediction.reduce((prev, current) => (prev.probability > current.probability) ? prev : current);
+      const highest = prediction.reduce((prev, current) =>
+        prev.probability > current.probability ? prev : current
+      );
+
       const now = Date.now();
 
-      if (highest.className !== "kein logo" && highest.probability > 0.8) {
+      if (highest.probability > 0.8 && highest.className !== "kein logo") {
         if (!classBuffer[highest.className]) {
           classBuffer[highest.className] = now;
-        } else if (now - classBuffer[highest.className] >= freezeDelay) {
-          if (lastDetectedClass !== highest.className) {
-            overlayText.innerText = `? Erkannt: ${highest.className}`;
-            lastDetectedClass = highest.className;
-            isFrozen = true;
-            nextButton.style.display = "block";
-          }
+        } else if (now - classBuffer[highest.className] >= 500 && currentClass !== highest.className) {
+          currentClass = highest.className;
+          overlayText.innerText = `Erkannt: ${highest.className}`;
+          freeze = true;
+          scanButton.style.display = "block";
         }
       } else {
         classBuffer = {};
       }
     }
 
-    nextButton.onclick = () => {
+    scanButton.addEventListener("click", () => {
+      currentClass = "";
       overlayText.innerText = "";
-      lastDetectedClass = "";
-      isFrozen = false;
       classBuffer = {};
-      nextButton.style.display = "none";
-    };
+      freeze = false;
+      scanButton.style.display = "none";
+    });
 
     window.addEventListener("load", init);
   </script>
