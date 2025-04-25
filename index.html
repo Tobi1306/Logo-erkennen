@@ -250,6 +250,12 @@
         document.getElementById("circle-menu").style.display = "flex";
         nextScanButton.style.display = 'block';
         scanning = false;
+      } else if (highest.probability < 0.8) {
+        // Keine ausreichende Wahrscheinlichkeit für ein Logo erkannt
+        logoName.innerText = "Kein Logo erkannt";
+        logoName.style.display = 'block';
+        document.getElementById("circle-menu").style.display = "none"; // Kreise nicht anzeigen
+        scanning = true; // Weiter scannen
       }
     }
 
@@ -258,7 +264,6 @@
         scanning = true; // Direkt beim Start scannen
       });
     });
-
 
     video.addEventListener("loadeddata", function () {
       video.play();
