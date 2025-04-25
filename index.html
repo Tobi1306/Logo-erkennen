@@ -36,7 +36,7 @@
       top: 50%;
       left: 50%;
       transform: translate(-50%, -50%);
-      display: flex;
+      display: none; /* Anfangs versteckt */
       flex-direction: column;
       justify-content: space-between;
       gap: 30px;
@@ -121,7 +121,7 @@
       background-color: #4CAF50;
       color: white;
       z-index: 4;
-      display: block;
+      display: none;
     }
   </style>
 
@@ -197,32 +197,29 @@
       logoName.innerText = "Kein Logo erkannt";
       logoName.style.display = 'none';
       nextScanButton.style.display = 'none';
-      webcam.play();
+      document.getElementById("circle-menu").style.display = 'none';
     }
 
     async function predict() {
-      if (!scanning) return; // Erkennung nur starten, wenn der Benutzer auf "Nächstes Logo scannen" klickt
+      if (!scanning) return;
+
       const prediction = await model.predict(video);
       const highest = prediction.reduce((prev, current) => (prev.probability > current.probability) ? prev : current);
 
-      const now = Date.now();
+      if (highest.probability > 0.8 && currentClassName !== highest.className) {
+        currentClassName = highest.className;
+        logoName.innerText = currentClassName;
+        logoName.style.display = 'block';
+        document.getElementById("circle-menu").style.display = 'flex';
+        nextScanButton.style.display = 'block';
 
-      if (highest.probability > 0.8) {
-        if (currentClassName !== highest.className) {
-          currentClassName = highest.className;
-          logoName.innerText = currentClassName;
-          logoName.style.display = 'block';
-          nextScanButton.style.display = 'block';
-        }
-      } else {
-        logoName.style.display = 'none';
-        nextScanButton.style.display = 'none';
+        // Stoppe Scannen bis Button gedrückt wird
+        scanning = false;
       }
     }
 
     window.addEventListener("load", init);
 
-    // Kamera streamen
     video.addEventListener("loadeddata", function() {
       video.play();
       window.requestAnimationFrame(loop);
