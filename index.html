@@ -39,7 +39,7 @@
       display: flex;
       flex-direction: column;
       justify-content: space-between;
-      gap: 20px;
+      gap: 30px;
       z-index: 2;
     }
 
@@ -58,16 +58,15 @@
     }
 
     .circle:nth-child(1) {
-      margin-left: 0;
+      margin-left: -50px;
     }
 
     .circle:nth-child(2) {
-      margin-left: 50px;
+      margin-left: 0;
     }
 
     .circle:nth-child(3) {
-      margin-left: 25px;
-      margin-top: -50px;
+      margin-left: 50px;
     }
 
     .overlay-panel {
@@ -98,6 +97,32 @@
       z-index: 4;
       display: none;
     }
+
+    #logo-name {
+      position: fixed;
+      top: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      color: white;
+      font-size: 2rem;
+      z-index: 5;
+      display: none;
+    }
+
+    #next-scan-button {
+      position: fixed;
+      bottom: 70px;
+      left: 50%;
+      transform: translateX(-50%);
+      padding: 10px 20px;
+      font-size: 1rem;
+      border: none;
+      border-radius: 8px;
+      background-color: #4CAF50;
+      color: white;
+      z-index: 4;
+      display: block;
+    }
   </style>
 
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.13.0/dist/tf.min.js"></script>
@@ -115,11 +140,16 @@
     <div class="overlay-panel" id="panel-pflege">Informationen zu Material & Pflege...</div>
     <div class="overlay-panel" id="panel-nachhaltigkeit">Nachhaltigkeitsinformationen...</div>
     <button id="back-button" onclick="showCircles()">Zurück</button>
+    <div id="logo-name">Kein Logo erkannt</div>
+    <button id="next-scan-button" onclick="nextScan()">Nächstes Logo scannen</button>
   </div>
 
   <script type="text/javascript">
     let model, maxPredictions;
     const video = document.getElementById("video");
+    const logoName = document.getElementById("logo-name");
+    const nextScanButton = document.getElementById("next-scan-button");
+    let currentClassName = '';
 
     async function init() {
       const URL = "./model/";
@@ -132,8 +162,8 @@
       const constraints = {
         video: {
           facingMode: { ideal: "environment" },
-          width: { ideal: 9999 },
-          height: { ideal: 9999 }
+          width: { ideal: 1280 },
+          height: { ideal: 720 }
         },
         audio: false
       };
@@ -160,7 +190,45 @@
       document.getElementById("back-button").style.display = "none";
     }
 
+    function nextScan() {
+      currentClassName = '';
+      logoName.innerText = "Kein Logo erkannt";
+      logoName.style.display = 'none';
+      nextScanButton.style.display = 'none';
+      webcam.play();
+    }
+
+    async function predict() {
+      const prediction = await model.predict(video);
+      const highest = prediction.reduce((prev, current) => (prev.probability > current.probability) ? prev : current);
+
+      const now = Date.now();
+
+      if (highest.probability > 0.8) {
+        if (currentClassName !== highest.className) {
+          currentClassName = highest.className;
+          logoName.innerText = currentClassName;
+          logoName.style.display = 'block';
+          nextScanButton.style.display = 'block';
+        }
+      } else {
+        logoName.style.display = 'none';
+        nextScanButton.style.display = 'none';
+      }
+    }
+
     window.addEventListener("load", init);
+
+    // Kamera streamen
+    video.addEventListener("loadeddata", function() {
+      video.play();
+      window.requestAnimationFrame(loop);
+    });
+
+    async function loop() {
+      await predict();
+      window.requestAnimationFrame(loop);
+    }
   </script>
 </body>
 </html>
