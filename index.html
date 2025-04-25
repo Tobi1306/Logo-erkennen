@@ -156,6 +156,7 @@
     const video = document.getElementById("video");
     const logoName = document.getElementById("logo-name");
     const nextScanButton = document.getElementById("next-scan-button");
+    const backButton = document.getElementById("back-button");
     let currentClassName = '';
     let scanning = false;
 
@@ -163,7 +164,7 @@
       "Class 1": {
         details: "Das ist Class 1 – hier stehen spezifische Produktdetails.",
         pflege: "Class 1 sollte kühl und trocken gelagert werden.",
-        nachhaltigkeit: "Class 1 ist zu 80% aus recycelten Materialien gefertigt."
+        nachhaltig: "Class 1 ist zu 80% aus recycelten Materialien gefertigt."
       },
       "Class 2": {
         details: "Class 2 bringt andere Eigenschaften mit sich.",
@@ -215,11 +216,11 @@
     }
 
     function nextScan() {
-      // Verstecke den Text und den Zurück-Button
+      // Verstecke den Text, den Zurück-Button und alle Panels
       logoName.style.display = 'none';
       nextScanButton.style.display = 'none';
-      
-      // Verstecke auch alle Panels
+      backButton.style.display = 'none';
+
       document.getElementById("panel-details").style.display = "none";
       document.getElementById("panel-pflege").style.display = "none";
       document.getElementById("panel-nachhaltigkeit").style.display = "none";
