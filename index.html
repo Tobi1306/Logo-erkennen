@@ -11,22 +11,26 @@
       height: 100%;
       background: black;
     }
+
     #webcam-container {
       position: fixed;
       top: 0;
       left: 0;
       width: 100vw;
       height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      flex-direction: column;
     }
+
     video {
-      width: 100vw;
       height: 100vh;
+      width: auto;
       object-fit: contain;
-      position: absolute;
-      top: 0;
-      left: 0;
       z-index: 0;
     }
+
     #overlay-text {
       position: absolute;
       top: 50%;
@@ -40,8 +44,9 @@
       border-radius: 10px;
       z-index: 2;
     }
+
     #next-button {
-      position: absolute;
+      position: fixed;
       bottom: 20px;
       left: 50%;
       transform: translateX(-50%);
@@ -60,15 +65,18 @@
 </head>
 <body>
   <div id="webcam-container">
+    <video id="video" autoplay playsinline></video>
     <div id="overlay-text">Lade Modell...</div>
     <button id="next-button">Nächstes Logo scannen</button>
   </div>
 
   <script type="text/javascript">
     let model, maxPredictions;
+    const video = document.getElementById("video");
     const overlayText = document.getElementById("overlay-text");
     const nextButton = document.getElementById("next-button");
-    let video, webcamCanvas, webcamCtx;
+
+    let webcamCanvas, webcamCtx;
     let detecting = true;
     let classBuffer = {};
     let currentClass = "";
@@ -81,16 +89,11 @@
       model = await tmImage.load(modelURL, metadataURL);
       maxPredictions = model.getTotalClasses();
 
-      video = document.createElement("video");
-      video.setAttribute("autoplay", "");
-      video.setAttribute("playsinline", "true");
-      document.getElementById("webcam-container").appendChild(video);
-
       const constraints = {
         video: {
           facingMode: { ideal: "environment" },
-          width: { ideal: 1280 },
-          height: { ideal: 720 }
+          width: { ideal: 720 },
+          height: { ideal: 1280 }
         },
         audio: false
       };
@@ -100,9 +103,7 @@
         video.srcObject = stream;
 
         await new Promise((resolve) => {
-          video.onloadedmetadata = () => {
-            resolve();
-          };
+          video.onloadedmetadata = () => resolve();
         });
 
         webcamCanvas = document.createElement("canvas");
@@ -119,6 +120,8 @@
 
     async function loop() {
       if (detecting) {
+        webcamCanvas.width = video.videoWidth;
+        webcamCanvas.height = video.videoHeight;
         webcamCtx.drawImage(video, 0, 0, webcamCanvas.width, webcamCanvas.height);
         await predict();
       }
