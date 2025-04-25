@@ -18,12 +18,14 @@
       width: 100vw;
       height: 100vh;
     }
-    canvas {
-      width: 100vw !important;
-      height: 100vh !important;
-      object-fit: contain !important;
-      display: block;
-      z-index: 1;
+    video {
+      width: 100vw;
+      height: 100vh;
+      object-fit: contain;
+      position: absolute;
+      top: 0;
+      left: 0;
+      z-index: 0;
     }
     #overlay-text {
       position: absolute;
@@ -31,26 +33,26 @@
       left: 50%;
       transform: translate(-50%, -50%);
       color: white;
-      font-size: 2.5rem;
+      font-size: 2rem;
       font-weight: bold;
       background-color: rgba(0, 0, 0, 0.5);
-      padding: 15px 30px;
-      border-radius: 15px;
+      padding: 10px 20px;
+      border-radius: 10px;
       z-index: 2;
-      text-align: center;
     }
-    #scan-button {
+    #next-button {
       position: absolute;
-      bottom: 30px;
+      bottom: 20px;
       left: 50%;
       transform: translateX(-50%);
-      padding: 15px 25px;
-      font-size: 1.2rem;
-      background-color: rgba(255, 255, 255, 0.8);
+      padding: 12px 24px;
+      font-size: 1rem;
       border: none;
-      border-radius: 10px;
-      cursor: pointer;
+      border-radius: 8px;
+      background-color: #2196f3;
+      color: white;
       z-index: 3;
+      display: none;
     }
   </style>
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.13.0/dist/tf.min.js"></script>
@@ -59,16 +61,17 @@
 <body>
   <div id="webcam-container">
     <div id="overlay-text">Lade Modell...</div>
-    <button id="scan-button" style="display: none;">Nächstes Logo scannen</button>
+    <button id="next-button">Nächstes Logo scannen</button>
   </div>
 
   <script type="text/javascript">
-    let model, webcam, maxPredictions;
+    let model, maxPredictions;
     const overlayText = document.getElementById("overlay-text");
-    const scanButton = document.getElementById("scan-button");
+    const nextButton = document.getElementById("next-button");
+    let video, webcamCanvas, webcamCtx;
+    let detecting = true;
     let classBuffer = {};
     let currentClass = "";
-    let freeze = false;
 
     async function init() {
       const URL = "./model/";
@@ -78,39 +81,52 @@
       model = await tmImage.load(modelURL, metadataURL);
       maxPredictions = model.getTotalClasses();
 
-      const flip = false;
+      video = document.createElement("video");
+      video.setAttribute("autoplay", "");
+      video.setAttribute("playsinline", "true");
+      document.getElementById("webcam-container").appendChild(video);
+
       const constraints = {
         video: {
           facingMode: { ideal: "environment" },
-          width: { ideal: 720 },
-          height: { ideal: 1280 }
-        }
+          width: { ideal: 1280 },
+          height: { ideal: 720 }
+        },
+        audio: false
       };
 
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia(constraints);
+        video.srcObject = stream;
 
-      webcam = new tmImage.Webcam(1280, 720, flip, constraints);
-      await webcam.setup();
-      await webcam.play();
+        await new Promise((resolve) => {
+          video.onloadedmetadata = () => {
+            resolve();
+          };
+        });
 
-      const canvas = webcam.canvas;
-      canvas.style.width = "100vw";
-      canvas.style.height = "100vh";
-      canvas.style.objectFit = "contain";
-      document.getElementById("webcam-container").appendChild(canvas);
+        webcamCanvas = document.createElement("canvas");
+        webcamCtx = webcamCanvas.getContext("2d");
+        webcamCanvas.width = video.videoWidth;
+        webcamCanvas.height = video.videoHeight;
 
-      window.requestAnimationFrame(loop);
+        requestAnimationFrame(loop);
+      } catch (err) {
+        overlayText.innerText = "Kamera konnte nicht gestartet werden.";
+        console.error(err);
+      }
     }
 
     async function loop() {
-      if (!freeze) {
-        webcam.update();
+      if (detecting) {
+        webcamCtx.drawImage(video, 0, 0, webcamCanvas.width, webcamCanvas.height);
         await predict();
       }
-      window.requestAnimationFrame(loop);
+      requestAnimationFrame(loop);
     }
 
     async function predict() {
-      const prediction = await model.predict(webcam.canvas);
+      const prediction = await model.predict(webcamCanvas);
       const highest = prediction.reduce((prev, current) =>
         prev.probability > current.probability ? prev : current
       );
@@ -120,23 +136,23 @@
       if (highest.probability > 0.8 && highest.className !== "kein logo") {
         if (!classBuffer[highest.className]) {
           classBuffer[highest.className] = now;
-        } else if (now - classBuffer[highest.className] >= 500 && currentClass !== highest.className) {
+        } else if (now - classBuffer[highest.className] > 500 && currentClass !== highest.className) {
           currentClass = highest.className;
           overlayText.innerText = `Erkannt: ${highest.className}`;
-          freeze = true;
-          scanButton.style.display = "block";
+          detecting = false;
+          nextButton.style.display = "block";
         }
       } else {
         classBuffer = {};
       }
     }
 
-    scanButton.addEventListener("click", () => {
+    nextButton.addEventListener("click", () => {
       currentClass = "";
-      overlayText.innerText = "";
       classBuffer = {};
-      freeze = false;
-      scanButton.style.display = "none";
+      overlayText.innerText = "";
+      detecting = true;
+      nextButton.style.display = "none";
     });
 
     window.addEventListener("load", init);
