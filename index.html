@@ -150,6 +150,7 @@
     const logoName = document.getElementById("logo-name");
     const nextScanButton = document.getElementById("next-scan-button");
     let currentClassName = '';
+    let scanning = false;
 
     async function init() {
       const URL = "./model/";
@@ -191,6 +192,7 @@
     }
 
     function nextScan() {
+      scanning = true;
       currentClassName = '';
       logoName.innerText = "Kein Logo erkannt";
       logoName.style.display = 'none';
@@ -199,6 +201,7 @@
     }
 
     async function predict() {
+      if (!scanning) return; // Erkennung nur starten, wenn der Benutzer auf "Nächstes Logo scannen" klickt
       const prediction = await model.predict(video);
       const highest = prediction.reduce((prev, current) => (prev.probability > current.probability) ? prev : current);
 
