@@ -168,7 +168,7 @@
       "Class 2": {
         details: "Class 2 bringt andere Eigenschaften mit sich.",
         pflege: "Bitte nicht in der Waschmaschine reinigen.",
-        nachhaltigkeit: "Diese Klasse erfüllt keine Nachhaltigkeitskriterien."
+        nachhaltig: "Diese Klasse erfüllt keine Nachhaltigkeitskriterien."
       }
     };
 
@@ -217,12 +217,16 @@
     function nextScan() {
       // Verstecke den Text und den Zurück-Button
       logoName.style.display = 'none';
-      document.getElementById("back-button").style.display = 'none';
+      nextScanButton.style.display = 'none';
+      
+      // Verstecke auch alle Panels
+      document.getElementById("panel-details").style.display = "none";
+      document.getElementById("panel-pflege").style.display = "none";
+      document.getElementById("panel-nachhaltigkeit").style.display = "none";
 
       scanning = true;
       currentClassName = '';
       logoName.innerText = "Kein Logo erkannt";
-      nextScanButton.style.display = 'none';
       document.getElementById("circle-menu").style.display = "none";
     }
 
